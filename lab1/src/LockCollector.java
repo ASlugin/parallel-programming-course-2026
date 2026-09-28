@@ -4,9 +4,9 @@ import model.Snapshot;
 import static model.Snapshot.percentile;
 
 /**
- * Этап 0
+ * Этап 1
  */
-public final class SingleThreadCollector implements MetricsCollector {
+public final class LockCollector implements MetricsCollector {
 
     private final long[] buckets = new long[Snapshot.AMOUNT_OF_BUCKETS];
     private long count;
@@ -15,7 +15,7 @@ public final class SingleThreadCollector implements MetricsCollector {
     private long max = 0;
 
     @Override
-    public void record(long value) {
+    public synchronized void record(long value) {
         count++;
         sum += value;
         min = Math.min(min, value);
@@ -24,7 +24,7 @@ public final class SingleThreadCollector implements MetricsCollector {
     }
 
     @Override
-    public Snapshot snapshot() {
+    public synchronized Snapshot snapshot() {
         return new Snapshot(
                 buckets.clone(),
                 count,
@@ -39,7 +39,7 @@ public final class SingleThreadCollector implements MetricsCollector {
 
     static void main() throws InterruptedException {
         int threads = 1;
-        MetricsCollector collector = new SingleThreadCollector();
+        MetricsCollector collector = new LockCollector();
         long[] values = ZipfGenerator.generate();
 
         Benchmark.measure(collector, values, threads);

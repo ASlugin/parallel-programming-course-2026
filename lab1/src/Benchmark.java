@@ -6,14 +6,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Benchmark {
 
-    static void main() throws InterruptedException {
-        int threads = 1;
-        MetricsCollector collector = new SingleThreadCollector();
-        long[] values = ZipfGenerator.generate();
-        int recordTimeInSeconds = 5;
-        int amountOfRuns = 5;
+    private static final int RECORD_TIME_IN_SECONDS = 5;
+    private static final int AMOUNT_OF_RUNS = 5;
 
-        measure(collector, values, threads, recordTimeInSeconds, amountOfRuns);
+    static double measure(MetricsCollector collector, long[] values, int threads) throws InterruptedException {
+        return measure(collector, values, threads, RECORD_TIME_IN_SECONDS, AMOUNT_OF_RUNS);
     }
 
     static double measure(
@@ -25,6 +22,7 @@ public class Benchmark {
     ) throws InterruptedException {
 
         System.out.println("================ MEASURE ================");
+        System.out.println("Collector: " + collector.getClass().getSimpleName());
         System.out.println("Amount of threads : " + threads);
         System.out.println("Record time : " + recordTimeInSeconds + " sec");
 
@@ -115,5 +113,16 @@ public class Benchmark {
                 sorted[n / 2]
                 :
                 (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+    }
+
+
+    static void main() throws InterruptedException {
+        int threads = 1;
+        MetricsCollector collector = new SingleThreadCollector();
+        long[] values = ZipfGenerator.generate();
+        int recordTimeInSeconds = 5;
+        int amountOfRuns = 5;
+
+        measure(collector, values, threads, recordTimeInSeconds, amountOfRuns);
     }
 }
