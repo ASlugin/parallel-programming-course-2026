@@ -2,6 +2,7 @@ package bench;
 
 import impl.LockCollector;
 import impl.StripedLockCollector;
+import impl.ThreadLocalCollector;
 import api.MetricsCollector;
 import api.Snapshot;
 
@@ -14,7 +15,8 @@ public class InconsistencyStressTest {
 
     private static final List<MetricsCollector> COLLECTORS = List.of(
             new LockCollector(),
-            new StripedLockCollector()
+            new StripedLockCollector(),
+            new ThreadLocalCollector()
     );
 
     private static final int WRITERS = 4;
