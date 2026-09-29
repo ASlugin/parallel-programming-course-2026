@@ -1,5 +1,8 @@
-import model.MetricsCollector;
-import model.Snapshot;
+package bench;
+
+import impl.SingleThreadCollector;
+import api.MetricsCollector;
+import api.Snapshot;
 
 import java.util.Random;
 

@@ -1,4 +1,4 @@
-package model;
+package api;
 
 public record Snapshot(
         long[] buckets, // ровно 256 элементов (глубокая копия, не ссылка!)

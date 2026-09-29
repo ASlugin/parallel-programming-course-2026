@@ -1,5 +1,9 @@
-import model.MetricsCollector;
-import model.Snapshot;
+package impl;
+
+import api.MetricsCollector;
+import api.Snapshot;
+import bench.Benchmark;
+import bench.ZipfGenerator;
 
 /**
  * Этап 1

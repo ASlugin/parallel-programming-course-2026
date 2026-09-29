@@ -1,7 +1,10 @@
-import model.MetricsCollector;
-import model.Snapshot;
+package bench;
 
-import java.util.ArrayList;
+import impl.LockCollector;
+import impl.StripedLockCollector;
+import api.MetricsCollector;
+import api.Snapshot;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;

@@ -1,9 +1,13 @@
-import model.MetricsCollector;
-import model.Snapshot;
+package impl;
+
+import api.MetricsCollector;
+import api.Snapshot;
+import bench.Benchmark;
+import bench.ZipfGenerator;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import static model.Snapshot.percentile;
+import static api.Snapshot.percentile;
 
 /**
  * Этап 2
@@ -82,7 +86,7 @@ public final class StripedLockCollector implements MetricsCollector {
 
 
     static void main() throws InterruptedException {
-        int threads = 18;
+        int threads = 1;
         MetricsCollector collector = new StripedLockCollector();
         long[] values = ZipfGenerator.generate();
 

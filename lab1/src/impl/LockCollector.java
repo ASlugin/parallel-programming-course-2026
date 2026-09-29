@@ -1,7 +1,11 @@
-import model.MetricsCollector;
-import model.Snapshot;
+package impl;
 
-import static model.Snapshot.percentile;
+import api.MetricsCollector;
+import api.Snapshot;
+import bench.Benchmark;
+import bench.ZipfGenerator;
+
+import static api.Snapshot.percentile;
 
 /**
  * Этап 1

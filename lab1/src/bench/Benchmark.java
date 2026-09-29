@@ -1,4 +1,7 @@
-import model.MetricsCollector;
+package bench;
+
+import impl.SingleThreadCollector;
+import api.MetricsCollector;
 
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
@@ -9,11 +12,11 @@ public class Benchmark {
     private static final int RECORD_TIME_IN_SECONDS = 5;
     private static final int AMOUNT_OF_RUNS = 5;
 
-    static double measure(MetricsCollector collector, long[] values, int threads) throws InterruptedException {
+    public static double measure(MetricsCollector collector, long[] values, int threads) throws InterruptedException {
         return measure(collector, values, threads, RECORD_TIME_IN_SECONDS, AMOUNT_OF_RUNS);
     }
 
-    static double measure(
+    public static double measure(
             MetricsCollector collector,
             long[] values,
             int threads,
@@ -44,7 +47,7 @@ public class Benchmark {
 
     // Один забег: threads потоков крутят record() ровно seconds секунд.
     // Возвращает опер/сек
-    static double run(
+    private static double run(
             MetricsCollector collector,
             long[] values,
             int threads,
@@ -105,7 +108,7 @@ public class Benchmark {
         }
     }
 
-    static double median(double[] array) {
+    private static double median(double[] array) {
         double[] sorted = array.clone();
         Arrays.sort(sorted);
         int n = sorted.length;
