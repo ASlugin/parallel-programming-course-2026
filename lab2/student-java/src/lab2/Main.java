@@ -15,7 +15,9 @@ public final class Main {
         t.setup(s);
         st.beginRun();
         s.run(st);
-        if (log) s.log.forEach(l -> System.out.println("  " + l));
+        if (log)
+            s.log.forEach(l -> System.out.println("  " + l));
+
         String failure = s.deadlock != null ? "DEADLOCK " + s.deadlock : t.check();
         return new Outcome(s.traceString(), failure);
     }
@@ -60,7 +62,10 @@ public final class Main {
     }
 
     public static void main(String[] a) {
-        if (a.length < 2) { System.out.println("usage: lab2 <target> <strategy> [arg] [log]"); return; }
+        if (a.length < 2) {
+            System.out.println("usage: lab2 <target> <strategy> [arg] [log]");
+            return;
+        }
         Supplier<Targets.Target> f = Targets.byName(a[0]);
         boolean log = a[a.length - 1].equals("log");
         switch (a[1]) {

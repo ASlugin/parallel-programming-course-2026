@@ -30,29 +30,41 @@ public final class Targets {
     static final class Withdraw implements Target {
         final int version;
         final Shared<Integer> sharedBalance = new Shared<>("balance", 100);   // V0: no lock
-        int balance = 100;                                                     // V1, V2: under mu
+        int balance = 100;                                                                // V1, V2: under mu
         SchedLock mu;
         final boolean[] ok = new boolean[2];
 
-        Withdraw(int version) { this.version = version; }
+        Withdraw(int version) {
+            this.version = version;
+        }
 
         boolean withdraw(int amt) {
             switch (version) {
                 case 0 -> {
                     boolean ok = sharedBalance.get() >= amt;
                     Scheduler.point();
-                    if (ok) sharedBalance.set(sharedBalance.get() - amt);
+                    if (ok)
+                        sharedBalance.set(sharedBalance.get() - amt);
                     return ok;
                 }
                 case 1 -> {
-                    mu.lock(); boolean ok = balance >= amt; mu.unlock();     // check
+                    mu.lock();                           // check
+                    boolean ok = balance >= amt;         // check
+                    mu.unlock();                         // check
                     Scheduler.point();
-                    if (ok) { mu.lock(); balance -= amt; mu.unlock(); }      // act
+                    if (ok) {
+                        mu.lock();                       // act
+                        balance -= amt;                  // act
+                        mu.unlock();                     // act
+                    }
                     return ok;
                 }
                 default -> {
                     mu.lock();
-                    if (balance < amt) { mu.unlock(); return false; }
+                    if (balance < amt) {
+                        mu.unlock();
+                        return false;
+                    }
                     Scheduler.point();
                     balance -= amt;
                     mu.unlock();
@@ -63,7 +75,11 @@ public final class Targets {
 
         public void setup(Scheduler s) {
             mu = new SchedLock(s, "mu");
-            for (int i = 0; i < 2; i++) { int k = i; s.spawn(() -> ok[k] = withdraw(100)); }
+            for (int i = 0; i < 2; i++) {
+                int k = i; s.spawn(() ->
+                        ok[k] = withdraw(100)
+                );
+            }
         }
 
         public String check() {
@@ -107,8 +123,13 @@ public final class Targets {
         String[] p = spec.split("-");
         String variant = p[0];
         int writers = 1, n = 1;
-        if (p.length > 1) { String[] wn = p[1].split("x"); writers = Integer.parseInt(wn[0]); n = Integer.parseInt(wn[1]); }
-        if (!Set.of("nostep3", "plain", "acqrel", "ok").contains(variant)) throw new IllegalArgumentException(variant);
+        if (p.length > 1) {
+            String[] wn = p[1].split("x");
+            writers = Integer.parseInt(wn[0]);
+            n = Integer.parseInt(wn[1]);
+        }
+        if (!Set.of("nostep3", "plain", "acqrel", "ok").contains(variant))
+            throw new IllegalArgumentException(variant);
         int w = writers, nn = n;
         return () -> new Collector(variant, w, nn);
     }
