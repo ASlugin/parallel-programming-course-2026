@@ -1,5 +1,6 @@
 package lab2;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -64,18 +65,59 @@ public final class Strategies {
     /** Stateless DFS по дереву выборов: каждый прогон с нуля, повторяет префикс прошлого и берёт следующий вариант.
      *  bound — максимум вытеснений (этап 5); для dfs runner передаёт Integer.MAX_VALUE. */
     public static final class Dfs implements Strategy {
-        public Dfs(int bound) { }
+        /** Развилка на пути: какие были варианты и какой из них выбран сейчас. */
+        private static final class Branch {
+            final List<Integer> options;
+            int chosen;
+
+            Branch(List<Integer> options) {
+                this.options = options;
+            }
+        }
+
+        private final int bound;                              // максимум вытеснений за прогон
+        private final List<Branch> path = new ArrayList<>();  // развилки текущего прогона, от корня вниз
+        private int depth;                                    // номер решения в текущем прогоне
+        private int preemptions;                              // сколько вытеснений уже было в текущем прогоне
+
+        public Dfs(int bound) {
+            this.bound = bound;
+        }
 
         /** Подготовиться к новому прогону (позиция в пути, счётчик вытеснений). */
-        public void beginRun() { }
+        public void beginRun() {
+            depth = 0;
+            preemptions = 0;
+        }
 
         public int pick(List<Integer> enabled, int last) {
-            throw new UnsupportedOperationException("TODO этап 4: Dfs.pick");
+            // вытеснение — выбрать другой поток, когда прошлый (last) ещё может идти дальше
+            boolean lastCanGo = enabled.contains(last);
+            if (depth == path.size()) {
+                // новая развилка: если лимит вытеснений исчерпан, вариант один — продолжить last
+                List<Integer> options = lastCanGo && preemptions >= bound ? List.of(last) : new ArrayList<>(enabled);
+                path.add(new Branch(options));  // начинаем с первого варианта
+            }
+            Branch b = path.get(depth);
+            depth++;
+            int next = b.options.get(b.chosen);
+            if (lastCanGo && next != last)
+                preemptions++;
+            return next;
         }
 
         /** Выбрать следующий путь; false — дерево обойдено. */
         public boolean endRun() {
-            throw new UnsupportedOperationException("TODO этап 4: Dfs.endRun");
+            // с конца пути ищем развилку, где остались неиспробованные варианты
+            while (!path.isEmpty()) {
+                Branch b = path.getLast();
+                if (b.chosen + 1 < b.options.size()) {
+                    b.chosen++;  // префикс до неё повторим, а здесь возьмём следующий вариант
+                    return true;
+                }
+                path.removeLast();  // здесь всё испробовано — поднимаемся выше
+            }
+            return false;
         }
     }
 }
