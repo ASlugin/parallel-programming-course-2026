@@ -26,7 +26,7 @@ public final class Scheduler {
         Thread thread;
         boolean finished;
         boolean needPause = true;                 // трогал ли общее с прошлой паузы; перед первой операцией пауза нужна всегда
-        BooleanSupplier waitFor;                  // await: пока условие ложно, потока нет в enabled
+        BooleanSupplier waitFor;                  // занятый лок / await: пока условие ложно, потока нет в enabled
 
         Worker(Scheduler scheduler, int id, Runnable body) {
             this.scheduler = scheduler;
@@ -42,6 +42,14 @@ public final class Scheduler {
     private final List<Worker> workers = new ArrayList<>();
     private final Semaphore back = new Semaphore(0);  // поток отдал ход планировщику
     private final StringBuilder trace = new StringBuilder(); // траса прогона
+
+    /** Все локи прогона в порядке создания (для held={...}). Заполняет конструктор SchedLock. */
+    final List<SchedLock> locks = new ArrayList<>();
+    /** Прогон прерван из-за deadlock: разбуженный поток не продолжает работу, а выходит. */
+    private boolean aborted;
+
+    /** Этим исключением раскручивается стек застрявшего потока после deadlock. */
+    private static final class RunAborted extends RuntimeException { }
 
     public Scheduler() { }
 
@@ -73,8 +81,12 @@ public final class Scheduler {
             }
             if (!alive)
                 break;
-            if (enabled.isEmpty())
-                throw new IllegalStateException("TODO этап 2: deadlock");
+            if (enabled.isEmpty()) {
+                // живые потоки есть, но никто не может сделать шаг
+                deadlock = heldLocks();
+                abortAll();
+                break;
+            }
 
             int next = strategy.pick(enabled, last);
             trace.append(workers.get(next).name);
@@ -98,10 +110,29 @@ public final class Scheduler {
         return trace.toString();
     }
 
+    /** "held={a:A, b:B}": только занятые локи, в порядке создания. */
+    private String heldLocks() {
+        List<String> held = new ArrayList<>();
+        for (SchedLock l : locks)
+            if (l.owner != -1)
+                held.add(l.name + ":" + workers.get(l.owner).name);
+        return "held={" + String.join(", ", held) + "}";
+    }
+
+    /** Разбудить все застрявшие потоки, чтобы они вышли через RunAborted. Иначе join в run() повиснет. */
+    private void abortAll() {
+        aborted = true;
+        for (Worker w : workers)
+            if (!w.finished)
+                w.turn.release();
+    }
+
     private void threadMain(Worker w) {
         currentWorker.set(w);
         try {
             w.body.run();
+        } catch (RunAborted e) {
+            // прогон прерван (deadlock): поток просто выходит, в лог ничего не пишет
         } finally {
             w.finished = true;
             back.release();  // выход из потока тоже отдаёт ход планировщику
@@ -112,16 +143,32 @@ public final class Scheduler {
     private void pause(Worker w) {
         back.release();
         w.turn.acquireUninterruptibly();
+        if (aborted)
+            throw new RunAborted();
     }
 
     // дальше всё вызывается изнутри потоков под управлением планировщика
 
     /** Перед каждой операцией с общими данными (Shared, SchedLock): пауза, если с прошлой паузы поток что-то трогал. */
     static void beforeOp() {
+        beforeOp(() -> true);
+    }
+
+    /** То же, но операцию можно сделать, только когда canGo истинно (лок свободен, условие await выполнено).
+     *  Если сейчас нельзя — пауза, и пока canGo ложно, потока нет в enabled. */
+    static void beforeOp(BooleanSupplier canGo) {
         Worker worker = currentWorker.get();
-        if (worker.needPause)
+        if (worker.needPause || !canGo.getAsBoolean()) {
+            worker.waitFor = canGo;
             worker.scheduler.pause(worker);
+            worker.waitFor = null;
+        }
         worker.needPause = true;
+    }
+
+    /** Номер текущего потока: 0 = A, 1 = B, ... */
+    static int currentId() {
+        return currentWorker.get().id;
     }
 
     /** Добавить в лог строку "<поток>  <операция>" от имени текущего потока. */
@@ -139,13 +186,7 @@ public final class Scheduler {
 
     /** Ждать, пока cond не станет true. До этого поток не попадает в enabled. */
     public static void await(BooleanSupplier cond) {
-        Worker worker = currentWorker.get();
-        if (worker.needPause || !cond.getAsBoolean()) {
-            worker.waitFor = cond;
-            worker.scheduler.pause(worker);
-            worker.waitFor = null;
-        }
-        worker.needPause = true;  // как point(): перед следующей операцией нужна пауза
+        beforeOp(cond);  // после await, как после point(), перед следующей операцией нужна пауза
         log("await done");
     }
 }
