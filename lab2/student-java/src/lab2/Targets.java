@@ -102,7 +102,13 @@ public final class Targets {
             from.lock();
             Scheduler.point();
             to.lock();
-            if (aToB) { balA -= 10; balB += 10; } else { balB -= 10; balA += 10; }
+            if (aToB) {
+                balA -= 10;
+                balB += 10;
+            } else {
+                balB -= 10;
+                balA += 10;
+            }
             to.unlock();
             from.unlock();
         }
@@ -113,7 +119,9 @@ public final class Targets {
             s.spawn(() -> transfer(b, a, false));
         }
 
-        public String check() { return balA + balB == 200 ? null : "MONEY LOST"; }
+        public String check() {
+            return balA + balB == 200 ? null : "MONEY LOST";
+        }
     }
 
     // ---------------- double buffering from lab 1, one bucket ----------------
@@ -157,11 +165,19 @@ public final class Targets {
             }
         }
 
-        int getInside(int w) { return plainInside ? insidePlain[w] : inside.get(w).peek(); }
+        int getInside(int w) {
+            return plainInside ? insidePlain[w] : inside.get(w).peek();
+        }
 
         void setInside(int w, int v) {
-            if (plainInside) { insidePlain[w] = v; return; }
-            if (acqrel) inside.get(w).setRelease(v); else inside.get(w).set(v);
+            if (plainInside) {
+                insidePlain[w] = v;
+                return;
+            }
+            if (acqrel)
+                inside.get(w).setRelease(v);
+            else
+                inside.get(w).set(v);
         }
 
         void record(int w) {
@@ -169,7 +185,8 @@ public final class Targets {
             while (true) {
                 b = acqrel ? active.getAcquire() : active.get();
                 setInside(w, b);
-                if (!step3 || active.get() == b) break;    // step 3: did the reader flip meanwhile?
+                if (!step3 || active.get() == b)
+                    break;                       // step 3: did the reader flip meanwhile?
                 setInside(w, -1);
             }
             Shared<Long> c = cnt.get(w).get(b);
@@ -180,7 +197,10 @@ public final class Targets {
         void snapshot() {
             int old = active.get();
             active.set(1 - old);
-            for (int w = 0; w < writers; w++) { int k = w; Scheduler.await(() -> getInside(k) != old); }
+            for (int w = 0; w < writers; w++) {
+                int k = w;
+                Scheduler.await(() -> getInside(k) != old);
+            }
             for (int w = 0; w < writers; w++) {
                 Shared<Long> c = cnt.get(w).get(old);
                 global += c.get();
@@ -189,7 +209,12 @@ public final class Targets {
         }
 
         public void setup(Scheduler s) {
-            for (int w = 0; w < writers; w++) { int k = w; s.spawn(() -> { for (int i = 0; i < n; i++) record(k); }); }
+            for (int w = 0; w < writers; w++) {
+                int k = w; s.spawn(() -> {
+                    for (int i = 0; i < n; i++)
+                        record(k);
+                });
+            }
             s.spawn(this::snapshot);
         }
 
